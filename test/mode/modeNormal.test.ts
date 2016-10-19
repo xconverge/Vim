@@ -21,13 +21,13 @@ suite("Mode Normal", () => {
     teardown(cleanUpWorkspace);
 
     test("can be activated", async () => {
-        let activationKeys = ['<escape>', 'ctrl+['];
+        let activationKeys = ['<Esc>', '<C-[>'];
 
         for (let key of activationKeys) {
             await modeHandler.handleKeyEvent('i');
             await modeHandler.handleKeyEvent(key!);
 
-            assertEqual(modeHandler.currentMode.name, ModeName.Normal);
+            assertEqual(modeHandler.currentMode.name, ModeName.Normal, `${key} doesn't work.`);
         }
 
         await modeHandler.handleKeyEvent('v');
@@ -79,14 +79,14 @@ suite("Mode Normal", () => {
     });
 
     newTest({
-      title: "Can handle dw across lines",
+      title: "Can handle dw across lines (1)",
       start: ['one |two', '  three'],
       keysPressed: 'dw',
       end: ["one| ", "  three"]
     });
 
     newTest({
-      title: "Can handle dw across lines",
+      title: "Can handle dw across lines (2)",
       start: ['one |two', '', 'three'],
       keysPressed: 'dw',
       end: ["one| ", "", "three"]
@@ -132,6 +132,13 @@ suite("Mode Normal", () => {
       start: ['one', '|', 'two'],
       keysPressed: 'dd',
       end: ["one", "|two"],
+    });
+
+    newTest({
+      title: "Can handle ddp",
+      start: ['|one', 'two'],
+      keysPressed: 'ddp',
+      end: ["two", "|one"],
     });
 
     newTest({
@@ -209,6 +216,14 @@ suite("Mode Normal", () => {
       start: ['text text tex|t'],
       keysPressed: '^lllllllcw',
       end: ['text te| text'],
+      endMode: ModeName.Insert
+    });
+
+    newTest({
+      title: "Can handle 'cw' without removing EOL",
+      start: ['|text;', 'text'],
+      keysPressed: 'llllcw',
+      end: ['text|', 'text'],
       endMode: ModeName.Insert
     });
 
@@ -766,21 +781,21 @@ suite("Mode Normal", () => {
     newTest({
       title: "Can handle backspace",
       start: ['text |text'],
-      keysPressed: '<backspace><backspace>',
+      keysPressed: '<BS><BS>',
       end: ['tex|t text']
     });
 
     newTest({
       title: "Can handle backspace across lines",
       start: ['one', '|two'],
-      keysPressed: '<backspace><backspace>',
+      keysPressed: '<BS><BS>',
       end: ['o|ne', 'two']
     });
 
     newTest({
       title: "Can handle A and backspace",
       start: ['|text text'],
-      keysPressed: 'A<backspace><escape>',
+      keysPressed: 'A<BS><Esc>',
       end: ['text te|x']
     });
 
@@ -917,7 +932,6 @@ suite("Mode Normal", () => {
       end: [' |one', 'two', ' three', '    one', ' two']
     });
 
-
     newTest({
       title: "Can repeat w",
       start: ['|one two three four'],
@@ -935,14 +949,14 @@ suite("Mode Normal", () => {
     newTest({
       title: "I works correctly",
       start: ['|    one'],
-      keysPressed: 'Itest <escape>',
+      keysPressed: 'Itest <Esc>',
       end: ['    test| one']
     });
 
     newTest({
       title: "gI works correctly",
       start: ['|    one'],
-      keysPressed: 'gItest<escape>',
+      keysPressed: 'gItest<Esc>',
       end: ['tes|t    one']
     });
 
@@ -963,63 +977,63 @@ suite("Mode Normal", () => {
     newTest({
       title: "Undo 1",
       start: ['|'],
-      keysPressed: 'iabc<escape>adef<escape>uu',
+      keysPressed: 'iabc<Esc>adef<Esc>uu',
       end: ['|']
     });
 
     newTest({
       title: "Undo 2",
       start: ['|'],
-      keysPressed: 'iabc<escape>adef<escape>u',
+      keysPressed: 'iabc<Esc>adef<Esc>u',
       end: ['ab|c']
     });
 
     newTest({
       title: "Undo cursor",
       start: ['|'],
-      keysPressed: 'Iabc<escape>Idef<escape>Ighi<escape>uuu',
+      keysPressed: 'Iabc<Esc>Idef<Esc>Ighi<Esc>uuu',
       end: ['|']
     });
 
     newTest({
       title: "Undo cursor 2",
       start: ['|'],
-      keysPressed: 'Iabc<escape>Idef<escape>Ighi<escape>uu',
+      keysPressed: 'Iabc<Esc>Idef<Esc>Ighi<Esc>uu',
       end: ['|abc']
     });
 
     newTest({
       title: "Undo cursor 3",
       start: ['|'],
-      keysPressed: 'Iabc<escape>Idef<escape>Ighi<escape>u',
+      keysPressed: 'Iabc<Esc>Idef<Esc>Ighi<Esc>u',
       end: ['|defabc']
     });
 
     newTest({
       title: "Undo with movement first",
       start: ['|'],
-      keysPressed: 'iabc<escape>adef<escape>hlhlu',
+      keysPressed: 'iabc<Esc>adef<Esc>hlhlu',
       end: ['ab|c']
     });
 
     newTest({
       title: "Redo",
       start: ['|'],
-      keysPressed: 'iabc<escape>adef<escape>uu<c-r>',
+      keysPressed: 'iabc<Esc>adef<Esc>uu<C-r>',
       end: ['|abc']
     });
 
     newTest({
       title: "Redo",
       start: ['|'],
-      keysPressed: 'iabc<escape>adef<escape>uu<c-r><c-r>',
+      keysPressed: 'iabc<Esc>adef<Esc>uu<C-r><C-r>',
       end: ['abc|def']
     });
 
     newTest({
       title: "Redo",
       start: ['|'],
-      keysPressed: 'iabc<escape>adef<escape>uuhlhl<c-r><c-r>',
+      keysPressed: 'iabc<Esc>adef<Esc>uuhlhl<C-r><C-r>',
       end: ['abc|def']
     });
 
@@ -1054,7 +1068,7 @@ suite("Mode Normal", () => {
     newTest({
       title: "can handle s in visual mode",
       start: ["|abc def ghi"],
-      keysPressed: "vwshi <escape>",
+      keysPressed: "vwshi <Esc>",
       end: ["hi| ef ghi"]
     });
 
@@ -1082,7 +1096,7 @@ suite("Mode Normal", () => {
     newTest({
       title: "can repeat backspace twice",
       start: ["|11223344"],
-      keysPressed: "A<backspace><backspace><escape>0.",
+      keysPressed: "A<BS><BS><Esc>0.",
       end: ["112|2"]
     });
 
@@ -1117,49 +1131,49 @@ suite("Mode Normal", () => {
     newTest({
       title: "can ctrl-a correctly behind a word",
       start: ["|one 9"],
-      keysPressed: "<c-a>",
+      keysPressed: "<C-a>",
       end: ["one 1|0"]
     });
 
     newTest({
       title: "can ctrl-a on word",
       start: ["one -|11"],
-      keysPressed: "<c-a>",
+      keysPressed: "<C-a>",
       end: ["one -1|0"]
     });
 
     newTest({
       title: "can ctrl-a on a hex number",
       start: ["|0xf"],
-      keysPressed: "<c-a>",
+      keysPressed: "<C-a>",
       end: ["0x1|0"]
     });
 
     newTest({
       title: "can ctrl-a on decimal",
       start: ["1|1.123"],
-      keysPressed: "<c-a>",
+      keysPressed: "<C-a>",
       end: ["1|2.123"]
     });
 
     newTest({
       title: "can ctrl-a with numeric prefix",
       start: ["|-10"],
-      keysPressed: "15<c-a>",
+      keysPressed: "15<C-a>",
       end: ["|5"]
     });
 
     newTest({
       title: "can ctrl-a on a decimal",
       start: ["-10.|1"],
-      keysPressed: "10<c-a>",
+      keysPressed: "10<C-a>",
       end: ["-10.1|1"]
     });
 
     newTest({
       title: "can ctrl-a on an octal ",
       start: ["07|"],
-      keysPressed: "<c-a>",
+      keysPressed: "<C-a>",
       end: ["01|0"]
     });
 
@@ -1173,7 +1187,7 @@ suite("Mode Normal", () => {
     newTest({
       title: "can ctrl-x correctly behind a word",
       start: ["|one 10"],
-      keysPressed: "<c-x>",
+      keysPressed: "<C-x>",
       end: ["one |9"]
     });
 
@@ -1194,14 +1208,14 @@ suite("Mode Normal", () => {
     newTest({
       title: "/ does not affect mark",
       start: ["|one", "twooo", "thurr"],
-      keysPressed: "ma/two<enter>'a",
+      keysPressed: "ma/two\n'a",
       end: ["|one", "twooo", "thurr"]
     });
 
     newTest({
       title: "/ can search with regex",
       start: ["|", "one two2o"],
-      keysPressed: "/o\\do",
+      keysPressed: "/o\\do\n",
       end: ["", "one tw|o2o"]
     });
 
@@ -1259,5 +1273,13 @@ suite("Mode Normal", () => {
       keysPressed: "cc",
       end: ["{", "  |"],
       endMode: ModeName.Insert
+    });
+
+    newTest({
+      title: "Indent current line with correct Vim Mode",
+      start: ["|one", "two"],
+      keysPressed: ">>",
+      end: ["\t|one", "two"],
+      endMode: ModeName.Normal
     });
 });

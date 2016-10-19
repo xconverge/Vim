@@ -6,16 +6,20 @@
  * handleKeyEvent().
  */
 
-
 import * as vscode from 'vscode';
+import * as _ from "lodash";
 import { showCmdLine } from './src/cmd_line/main';
 import { ModeHandler } from './src/mode/modeHandler';
-import { TaskQueue } from './src/taskQueue';
+import { taskQueue } from './src/taskQueue';
 import { Position } from './src/motion/position';
 import { Globals } from './src/globals';
+import { AngleBracketNotation } from './src/notation';
+import { ModeName } from './src/mode/mode';
 
 interface VSCodeKeybinding {
   key: string;
+  mac?: string;
+  linux?: string;
   command: string;
   when: string;
 }
@@ -65,8 +69,6 @@ let extensionContext: vscode.ExtensionContext;
 let modeHandlerToEditorIdentity: { [key: string]: ModeHandler } = {};
 let previousActiveEditorId: EditorIdentity = new EditorIdentity();
 
-let taskQueue = new TaskQueue();
-
 export async function getAndUpdateModeHandler(): Promise<ModeHandler> {
   const oldHandler = modeHandlerToEditorIdentity[previousActiveEditorId.toString()];
   const activeEditorId = new EditorIdentity(vscode.window.activeTextEditor);
@@ -91,7 +93,7 @@ export async function getAndUpdateModeHandler(): Promise<ModeHandler> {
   } else {
     previousActiveEditorId = activeEditorId;
 
-    await handler.updateView(handler.vimState);
+    await handler.updateView(handler.vimState, false);
   }
 
   if (oldHandler && oldHandler.vimState.focusChanged) {
@@ -113,11 +115,51 @@ export async function activate(context: vscode.ExtensionContext) {
 
   vscode.window.onDidChangeActiveTextEditor(handleActiveEditorChange, this);
 
-  registerCommand(context, 'type', async (args) => {
-    if (!vscode.window.activeTextEditor) {
-      return;
+  vscode.workspace.onDidChangeTextDocument((event) => {
+    /**
+     * Change from vscode editor should set document.isDirty to true but they initially don't!
+     * There is a timing issue in vscode codebase between when the isDirty flag is set and
+     * when registered callbacks are fired. https://github.com/Microsoft/vscode/issues/11339
+     */
+
+    let contentChangeHandler = (modeHandler: ModeHandler) => {
+      if (modeHandler.vimState.currentMode === ModeName.Insert) {
+        if (modeHandler.vimState.historyTracker.currentContentChanges === undefined) {
+          modeHandler.vimState.historyTracker.currentContentChanges = [];
+        }
+
+        modeHandler.vimState.historyTracker.currentContentChanges =
+          modeHandler.vimState.historyTracker.currentContentChanges.concat(event.contentChanges);
+      }
     }
 
+    if (Globals.isTesting) {
+      contentChangeHandler(Globals.modeHandlerForTesting as ModeHandler);
+    } else {
+      _.filter(modeHandlerToEditorIdentity, modeHandler => modeHandler.fileName === event.document.fileName)
+        .forEach(modeHandler => {
+          contentChangeHandler(modeHandler);
+        });
+    }
+
+    setTimeout(() => {
+      if (!event.document.isDirty && !event.document.isUntitled) {
+        handleContentChangedFromDisk(event.document);
+      }
+    }, 0);
+  });
+
+  vscode.workspace.onDidCloseTextDocument((event) => {
+    const key = event.fileName + vscode.window.activeTextEditor.viewColumn;
+
+    if (modeHandlerToEditorIdentity[key] !== undefined) {
+      modeHandlerToEditorIdentity[key].dispose();
+      // Remove modehandler for closed document
+      delete modeHandlerToEditorIdentity[key];
+    }
+  });
+
+  registerCommand(context, 'type', async (args) => {
     taskQueue.enqueueTask({
       promise: async () => {
         const mh = await getAndUpdateModeHandler();
@@ -133,10 +175,6 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   registerCommand(context, 'replacePreviousChar', async (args) => {
-    if (!vscode.window.activeTextEditor) {
-      return;
-    }
-
     taskQueue.enqueueTask({
       promise: async () => {
         const mh = await getAndUpdateModeHandler();
@@ -157,10 +195,6 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   registerCommand(context, 'compositionStart', async (args) => {
-    if (!vscode.window.activeTextEditor) {
-      return;
-    }
-
     taskQueue.enqueueTask({
       promise: async () => {
         const mh = await getAndUpdateModeHandler();
@@ -171,10 +205,6 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   registerCommand(context, 'compositionEnd', async (args) => {
-    if (!vscode.window.activeTextEditor) {
-      return;
-    }
-
     taskQueue.enqueueTask({
       promise: async () => {
         const mh = await getAndUpdateModeHandler();
@@ -190,27 +220,45 @@ export async function activate(context: vscode.ExtensionContext) {
     showCmdLine("", modeHandlerToEditorIdentity[new EditorIdentity(vscode.window.activeTextEditor).toString()]);
   });
 
-  for (let { key } of packagejson.contributes.keybindings) {
-    if (key.startsWith("ctrl+")) {
-      registerCommand(context, `extension.vim_${ key }`, () => handleKeyEvent(key));
+  for (let keybinding of packagejson.contributes.keybindings) {
+    let keyToBeBound = "";
+
+    /**
+     * On OSX, handle mac keybindings if we specified one.
+     */
+    if (process.platform === "darwin") {
+      keyToBeBound = keybinding.mac || keybinding.key;
+    } else if (process.platform === "linux") {
+      keyToBeBound = keybinding.linux || keybinding.key;
     } else {
-      let bracketedKey = `<${ key.toLowerCase() }>`;
-
-      registerCommand(context, `extension.vim_${ key.toLowerCase() }`, () => handleKeyEvent(`${ bracketedKey }`));
+      keyToBeBound = keybinding.key;
     }
-  }
 
-  registerCommand(context, `extension.vim_esc`, () => handleKeyEvent(`<escape>`));
+    let bracketedKey = AngleBracketNotation.Normalize(keyToBeBound);
+
+    registerCommand(context, keybinding.command, () => handleKeyEvent(`${ bracketedKey }`));
+  }
 
   // Initialize mode handler for current active Text Editor at startup.
   if (vscode.window.activeTextEditor) {
-    let mh = await getAndUpdateModeHandler()
+    let mh = await getAndUpdateModeHandler();
     mh.updateView(mh.vimState, false);
   }
 }
 
 function registerCommand(context: vscode.ExtensionContext, command: string, callback: (...args: any[]) => any) {
-  let disposable = vscode.commands.registerCommand(command, callback);
+  let disposable = vscode.commands.registerCommand(command, async (args) => {
+    if (!vscode.window.activeTextEditor) {
+      return;
+    }
+
+    if (vscode.window.activeTextEditor.document && vscode.window.activeTextEditor.document.uri.toString() === "debug:input") {
+      await vscode.commands.executeCommand("default:" + command, args);
+      return;
+    }
+
+    callback(args);
+  });
   context.subscriptions.push(disposable);
 }
 
@@ -223,6 +271,13 @@ async function handleKeyEvent(key: string): Promise<void> {
   });
 }
 
+function handleContentChangedFromDisk(document : vscode.TextDocument) : void {
+  _.filter(modeHandlerToEditorIdentity, modeHandler => modeHandler.fileName === document.fileName)
+    .forEach(modeHandler => {
+      modeHandler.vimState.historyTracker.clear();
+    });
+}
+
 async function handleActiveEditorChange(): Promise<void> {
 
   // Don't run this event handler during testing
@@ -230,10 +285,16 @@ async function handleActiveEditorChange(): Promise<void> {
     return;
   }
 
-  if (vscode.window.activeTextEditor !== undefined) {
-    const mh = await getAndUpdateModeHandler();
-    mh.updateView(mh.vimState, false);
-  }
+  taskQueue.enqueueTask({
+    promise: async () => {
+      if (vscode.window.activeTextEditor !== undefined) {
+        const mh = await getAndUpdateModeHandler();
+
+        mh.updateView(mh.vimState, false);
+      }
+    },
+    isRunning: false
+  });
 }
 
 process.on('unhandledRejection', function(reason: any, p: any) {

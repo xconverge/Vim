@@ -5,9 +5,15 @@ import { ModeHandler } from '../../src/mode/modeHandler';
 import { setupWorkspace, cleanUpWorkspace, assertEqualLines, assertEqual } from './../testUtils';
 import { ModeName } from '../../src/mode/mode';
 import { TextEditor } from '../../src/textEditor';
+import { getTestingFunctions } from '../testSimplifier';
 
 suite("Mode Visual", () => {
-  let modeHandler: ModeHandler;
+  let modeHandler: ModeHandler = new ModeHandler();
+
+  let {
+    newTest,
+    newTestOnly,
+  } = getTestingFunctions(modeHandler);
 
   setup(async () => {
     await setupWorkspace();
@@ -27,7 +33,7 @@ suite("Mode Visual", () => {
   test("Can handle w", async () => {
     await modeHandler.handleMultipleKeyEvents("itest test test\ntest\n".split(""));
     await modeHandler.handleMultipleKeyEvents([
-      '<escape>', 'g', 'g',
+      '<Esc>', 'g', 'g',
       'v', 'w'
     ]);
 
@@ -45,7 +51,7 @@ suite("Mode Visual", () => {
   test("Can handle wd", async () => {
     await modeHandler.handleMultipleKeyEvents("ione two three".split(""));
     await modeHandler.handleMultipleKeyEvents([
-      '<escape>', '^',
+      '<Esc>', '^',
       'v', 'w', 'd'
     ]);
 
@@ -55,7 +61,7 @@ suite("Mode Visual", () => {
   test("Can handle x", async () => {
     await modeHandler.handleMultipleKeyEvents("ione two three".split(""));
     await modeHandler.handleMultipleKeyEvents([
-      '<escape>', '^',
+      '<Esc>', '^',
       'v', 'x'
     ]);
 
@@ -67,7 +73,7 @@ suite("Mode Visual", () => {
   test("Can handle U", async () => {
     await modeHandler.handleMultipleKeyEvents("ione two three".split(""));
     await modeHandler.handleMultipleKeyEvents([
-       '<escape>', '^',
+       '<Esc>', '^',
       'v', 'U'
     ]);
 
@@ -79,7 +85,7 @@ suite("Mode Visual", () => {
   test("Can handle x across a selection", async () => {
     await modeHandler.handleMultipleKeyEvents("ione two three".split(""));
     await modeHandler.handleMultipleKeyEvents([
-      '<escape>', '^',
+      '<Esc>', '^',
       'v', 'w', 'x'
     ]);
 
@@ -91,7 +97,7 @@ suite("Mode Visual", () => {
   test("Can do vwd in middle of sentence", async () => {
     await modeHandler.handleMultipleKeyEvents("ione two three foar".split(""));
     await modeHandler.handleMultipleKeyEvents([
-      '<escape>', '^',
+      '<Esc>', '^',
       'l', 'l', 'l', 'l',
       'v', 'w', 'd'
     ]);
@@ -102,7 +108,7 @@ suite("Mode Visual", () => {
   test("Can do vwd in middle of sentence", async () => {
     await modeHandler.handleMultipleKeyEvents("ione two three".split(""));
     await modeHandler.handleMultipleKeyEvents([
-      '<escape>', '^',
+      '<Esc>', '^',
       'l', 'l', 'l', 'l',
       'v', 'w', 'd'
     ]);
@@ -113,7 +119,7 @@ suite("Mode Visual", () => {
   test("Can do vwd multiple times", async () => {
     await modeHandler.handleMultipleKeyEvents("ione two three four".split(""));
     await modeHandler.handleMultipleKeyEvents([
-      '<escape>', '^',
+      '<Esc>', '^',
       'v', 'w', 'd',
       'v', 'w', 'd',
       'v', 'w', 'd'
@@ -125,7 +131,7 @@ suite("Mode Visual", () => {
   test("Can handle U across a selection", async () => {
     await modeHandler.handleMultipleKeyEvents("ione two three".split(""));
     await modeHandler.handleMultipleKeyEvents([
-      '<escape>', '^',
+      '<Esc>', '^',
       'v', 'l', 'l', 'l', 'l', 'U'
     ]);
 
@@ -137,7 +143,7 @@ suite("Mode Visual", () => {
   test("Can handle U across a selection in reverse order", async () => {
     await modeHandler.handleMultipleKeyEvents("ione two three".split(""));
     await modeHandler.handleMultipleKeyEvents([
-      '<escape>', '^',
+      '<Esc>', '^',
       'w', 'v', 'h', 'h', 'U'
     ]);
 
@@ -149,7 +155,7 @@ suite("Mode Visual", () => {
   test("handles case where we go from selecting on right side to selecting on left side", async () => {
     await modeHandler.handleMultipleKeyEvents("ione two three".split(""));
     await modeHandler.handleMultipleKeyEvents([
-      '<escape>', '^',
+      '<Esc>', '^',
       'l', 'l', 'l', 'l',
       'v', 'w', 'b', 'b', 'd'
     ]);
@@ -160,7 +166,7 @@ suite("Mode Visual", () => {
   test("handles case where we delete over a newline", async () => {
     await modeHandler.handleMultipleKeyEvents("ione two\n\nthree four".split(""));
     await modeHandler.handleMultipleKeyEvents([
-      '<escape>', '0', 'k', 'k',
+      '<Esc>', '0', 'k', 'k',
       'v', '}', 'd'
     ]);
 
@@ -170,7 +176,7 @@ suite("Mode Visual", () => {
   test("handles change operator", async () => {
     await modeHandler.handleMultipleKeyEvents("ione two three".split(""));
     await modeHandler.handleMultipleKeyEvents([
-      '<escape>', '^',
+      '<Esc>', '^',
       'v', 'w', 'c'
     ]);
 
@@ -186,7 +192,7 @@ suite("Mode Visual", () => {
       );
 
       await modeHandler.handleMultipleKeyEvents([
-        '<escape>',
+        '<Esc>',
         '^', 'g', 'g',
         'v', 'l', 'l', 'l',
         'd'
@@ -201,7 +207,7 @@ suite("Mode Visual", () => {
       );
 
       await modeHandler.handleMultipleKeyEvents([
-        '<escape>',
+        '<Esc>',
         'g', 'g',
         'l', 'v', 'l', 'l',
         'd'
@@ -216,7 +222,7 @@ suite("Mode Visual", () => {
       );
 
       await modeHandler.handleMultipleKeyEvents([
-        '<escape>',
+        '<Esc>',
         'g', 'g',
         'd', '$'
       ]);
@@ -230,12 +236,29 @@ suite("Mode Visual", () => {
       );
 
       await modeHandler.handleMultipleKeyEvents([
-        '<escape>',
+        '<Esc>',
         'g', 'g',
         'v', '$', 'd'
       ]);
 
       assertEqualLines(["two"]);
+    });
+
+  });
+
+  suite("Arrow keys work perfectly in Visual Line Mode", () => {
+    newTest({
+      title: "Can handle <up> key",
+      start: ['blah', 'duh', '|dur', 'hur'],
+      keysPressed: 'V<up>x',
+      end: ['blah', '|hur']
+    });
+
+    newTest({
+      title: "Can handle <down> key",
+      start: ['blah', 'duh', '|dur', 'hur'],
+      keysPressed: 'V<down>x',
+      end: ['blah', '|duh']
     });
   });
 });

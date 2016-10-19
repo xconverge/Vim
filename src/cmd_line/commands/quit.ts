@@ -7,6 +7,7 @@ import * as error from '../../error';
 export interface IQuitCommandArguments extends node.ICommandArgs {
   bang?: boolean;
   range?: node.LineRange;
+  quitAll?: boolean;
 }
 
 //
@@ -28,14 +29,14 @@ export class QuitCommand extends node.CommandBase {
   }
 
   async execute() : Promise<void> {
-    if (this.activeTextEditor.document.isUntitled && !this._arguments.bang) {
-      throw error.VimError.fromCode(error.ErrorCode.E32);
-    }
-
     if (this.activeTextEditor.document.isDirty && !this.arguments.bang) {
       throw error.VimError.fromCode(error.ErrorCode.E37);
     }
 
-    await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+    if (this._arguments.quitAll) {
+      await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+    } else {
+      await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+    }
   }
 }
