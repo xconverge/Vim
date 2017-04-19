@@ -3696,8 +3696,10 @@ abstract class MoveByScreenLine extends BaseMovement {
       let start = Position.FromVSCodePosition(vimState.editor.selection.start);
       let stop = Position.FromVSCodePosition(vimState.editor.selection.end);
 
-      // We want to swap the cursor start stop positions based on which direction we are moving, up or down
-      if (start.line < position.line) {
+      // We want to swap the cursor start stop positions based on which
+      // direction we are moving, up or down so that the selection always
+      // starts and ends in the correct places
+      if (start.line < position.line && this.movementType === "up") {
         [start, stop] = [stop, start];
       }
 
