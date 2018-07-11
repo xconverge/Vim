@@ -4,6 +4,7 @@ import { Position, PositionDiff } from './common/motion/position';
 import { configuration } from './configuration/configuration';
 import { VimState } from './state/vimState';
 import { ReplaceTextTransformation } from './transformations/transformations';
+import { isEmoji } from './util/util';
 
 export class TextEditor {
   static readonly whitespaceRegExp = new RegExp('^ *$');
@@ -23,6 +24,7 @@ export class TextEditor {
     // We *probably* don't want that to happen if we're inserting a lot of text.
     if (letVSCodeHandleKeystrokes === undefined) {
       letVSCodeHandleKeystrokes = text.length === 1;
+      letVSCodeHandleKeystrokes = letVSCodeHandleKeystrokes || isEmoji(text);
     }
 
     if (!letVSCodeHandleKeystrokes) {

@@ -5,6 +5,8 @@ import { Position } from '../common/motion/position';
 import { Range } from '../common/motion/range';
 import { logger } from './logger';
 
+const emojiRegex = require('emoji-regex');
+
 /**
  * This is certainly quite janky! The problem we're trying to solve
  * is that writing editor.selection = new Position() won't immediately
@@ -39,4 +41,13 @@ export async function getCursorsAfterSync(timeout: number = 0): Promise<Range[]>
 
 export function getExtensionDirPath(): string {
   return path.join(os.homedir(), '.VSCodeVim');
+}
+
+/**
+ * Returns true if the character is an emoji
+ * @param char String to check if it is an emoji
+ */
+export function isEmoji(char: string): boolean {
+  const match = emojiRegex().exec(char);
+  return match !== null;
 }
