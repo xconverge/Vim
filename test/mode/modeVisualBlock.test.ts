@@ -159,4 +159,18 @@ suite('Mode Visual Block', () => {
     keysPressed: '<C-v>jjllold',
     end: ['|f', 'b', 'b'],
   });
+
+  newTest({
+    title: 'cw in visual block mode does write to lines not preceded by a space',
+    start: ['1|11', '1', '111'],
+    keysPressed: '<C-v>jjc2',
+    end: ['1|21', '12', '121'],
+  });
+
+  newTest({
+    title: 'cw in visual block mode does not write to lines that are preceded by a space',
+    start: ['11|1', '1', '111'],
+    keysPressed: '<C-v>jjc2',
+    end: ['11|2', '1', '112'],
+  });
 });
